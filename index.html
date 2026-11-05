@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<title>UPI Pay</title>
+<style>
+  :root { --bg: #f4f6f8; --card: #fff; --text: #14181f; --muted: #5b6573; --accent: #0b7a3e; --accent-text: #fff; --warn: #a23b00; --line: #dde2e8; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0f1216; --card: #191e25; --text: #eef1f5; --muted: #9aa5b3; --accent: #2fbf6b; --accent-text: #06210f; --warn: #ffb27a; --line: #2a313b; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 440px; margin: 0 auto; padding: 24px 16px 40px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 22px 20px; }
+  .label { color: var(--muted); font-size: 14px; margin: 0; }
+  .amount { font-size: 40px; font-weight: 700; margin: 2px 0 18px; letter-spacing: -0.5px; }
+  .name { font-size: 22px; font-weight: 650; margin: 2px 0 2px; word-break: break-word; }
+  .upi { font-family: ui-monospace, Consolas, monospace; font-size: 16px; margin: 0 0 20px; word-break: break-all; }
+  .pay { display: block; width: 100%; text-align: center; background: var(--accent); color: var(--accent-text); text-decoration: none; font-size: 20px; font-weight: 700; padding: 18px 12px; border-radius: 12px; }
+  .pay:active { filter: brightness(0.92); }
+  .check { margin: 18px 0 0; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+  .check b { color: var(--text); }
+  .error { color: var(--warn); font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+  <div class="card" id="card">
+    <p class="error" id="error" hidden>This payment link is incomplete. Pay from the Telegram message's QR code or from My Orders instead.</p>
+    <div id="details" hidden>
+      <p class="label">Pay exactly</p>
+      <p class="amount" id="amount"></p>
+      <p class="label">To</p>
+      <p class="name" id="name"></p>
+      <p class="upi" id="upi"></p>
+      <a class="pay" id="pay" href="#">Pay with UPI app</a>
+      <p class="check">Your UPI app opens with everything filled in. Before you press Pay there, check it shows the name <b id="checkName"></b> and the amount <b id="checkAmount"></b>.</p>
+    </div>
+  </div>
+</main>
+<script>
+  // The payment details come after the # (pa = UPI ID, pn = name, am = amount, cu = INR), which browsers never send
+  // to the server, so this page's host never sees them. They are checked and passed on as a upi://pay link, which
+  // Android opens in the UPI app chosen from its "Pay with" list.
+  (function () {
+    var params = new URLSearchParams(location.hash.slice(1));
+    var pa = (params.get('pa') || '').trim();
+    var pn = (params.get('pn') || '').trim();
+    var am = (params.get('am') || '').trim();
+    if (!/^[A-Za-z0-9._-]+@[A-Za-z0-9._-]+$/.test(pa) || (am && !/^\d{1,7}(\.\d{1,2})?$/.test(am))) {
+      document.getElementById('error').hidden = false;
+      return;
+    }
+    var link = 'upi://pay?pa=' + pa + (pn ? '&pn=' + encodeURIComponent(pn) : '') + (am ? '&am=' + Number(am).toFixed(2) : '') + '&cu=INR';
+    var amountText = am ? '₹' + Number(am).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : 'the amount in My Orders';
+    document.getElementById('amount').textContent = am ? amountText : 'See My Orders';
+    document.getElementById('name').textContent = pn || 'Name not given';
+    document.getElementById('upi').textContent = pa;
+    document.getElementById('checkName').textContent = pn || '(see My Orders)';
+    document.getElementById('checkAmount').textContent = amountText;
+    var pay = document.getElementById('pay');
+    pay.href = link;
+    pay.textContent = am ? 'Pay ' + amountText : 'Pay with UPI app';
+    document.getElementById('details').hidden = false;
+    // Open the UPI app list at once; if the browser blocks that, the Pay button does it.
+    try { location.href = link; } catch (e) {}
+  })();
+</script>
+</body>
+</html>
